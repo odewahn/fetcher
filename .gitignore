@@ -1,0 +1,15 @@
+.env
+*.db
+*.bak
+*.epub
+*.html
+*.pdf
+.venv
+dist
+build
+.env.old
+*.sqbpro
+.DS_Store
+promptlab.spec
+__pycache__/
+*.zip

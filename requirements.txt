@@ -1,0 +1,9 @@
+python-dotenv
+requests
+bs4
+markdownify
+markdown
+rich
+pyyaml
+art
+prompt_toolkit
