@@ -30,6 +30,8 @@ ENV_FILENAME = ".orm-content-grabber"
 
 VERSION = "0.1.1"
 
+global args
+
 
 # Check if the .promptlab file exists in the home directory
 def load_env():
@@ -202,6 +204,37 @@ def action_fetch_book(metadata):
         save_file(dir + "/" + fn, content)
 
 
+def action_fetch():
+    # Grab and save the metadata
+    metadata = fetch_metadata(args.identifier)
+    if metadata["content_format"] == "book":
+        console.log(f"Fetching contents of book {metadata['title']}")
+        action_fetch_book(metadata)
+        save_file("metadata.yaml", yaml.dump(cleaned_metadata(metadata)))
+    # Get the content, which depends on the format
+    elif metadata["content_format"] == "video":
+        console.log(f"Fetching contents of video {metadata['title']}")
+        action_fetch_transcript(metadata)
+        save_file("metadata.yaml", yaml.dump(cleaned_metadata(metadata)))
+    # Get the content, which depends on the format
+    else:
+        print(f"Can't get content format {metadata['content_format']}")
+
+
+def action_fetch_from_file():
+    with open(args.file) as f:
+        identifiers = f.readlines()
+    # Remove whitespace characters like `\n` at the end of each line
+    identifiers = [x.strip() for x in identifiers]
+    for identifier in identifiers:
+        print(f"Fetching {identifier}")
+        # set the globals args identifier to the current identifier
+        globals()["args"].identifier = identifier
+        action_fetch()
+    globals()["args"].identifier = None
+    return
+
+
 # *****************************************************************************************
 # Code related to the command line interface
 # *****************************************************************************************
@@ -229,14 +262,11 @@ def define_arguments(argString=None):
         help="The action to perform ",
     )
 
-    parser.add_argument(
-        "--identifier",
-        help="Identifier to use",
-        required=False,
-        default="9781098115302",
-    )
+    parser.add_argument("--identifier", help="Identifier to use", required=False)
 
     parser.add_argument("--dir", help="Directory name", required=False)
+
+    parser.add_argument("--file", help="File of works to fetch from", required=False)
 
     if argString:
         return parser.parse_args(shlex_split(argString))
@@ -254,26 +284,21 @@ def process_command():
         action_set_credentials()
 
     if args.action == "fetch":
-        if args.identifier is None:
-            raise Exception("You must provide a --work argument for the work to load")
+        # If both a file and an identifier are provided, raise an error
+        if args.file and args.identifier:
+            raise Exception("You can't provide both a file and an identifier")
+        # If neither a file nor an identifier are provided, raise an error
+        if args.file is None and args.identifier is None:
+            raise Exception("You must provide either a file or an identifier")
         # Check that they have a JWT
         if load_env() is False:
             action_set_api_key()
             load_env()
-        # Grab and save the metadata
-        metadata = fetch_metadata(args.identifier)
-        if metadata["content_format"] == "book":
-            console.log(f"Fetching contents of book {metadata['title']}")
-            action_fetch_book(metadata)
-            save_file("metadata.yaml", yaml.dump(cleaned_metadata(metadata)))
-        # Get the content, which depends on the format
-        elif metadata["content_format"] == "video":
-            console.log(f"Fetching contents of video {metadata['title']}")
-            action_fetch_transcript(metadata)
-            save_file("metadata.yaml", yaml.dump(cleaned_metadata(metadata)))
-        # Get the content, which depends on the format
+        # Fetch the content.  If there is an identifier, then fetch that.  If there is a file, then fetch from the file
+        if args.identifier:
+            action_fetch()
         else:
-            print(f"Can't get content format {metadata['content_format']}")
+            action_fetch_from_file()
         return
 
     if args.action == "ls":
