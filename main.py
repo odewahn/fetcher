@@ -1,4 +1,4 @@
-import argparse
+from argparse import ArgumentParser, BooleanOptionalAction
 from rich.console import Console
 from rich import print
 from rich.table import Table
@@ -16,18 +16,19 @@ from shlex import split as shlex_split
 from art import text2art
 from prompt_toolkit import PromptSession
 from markdownify import markdownify as md
-
-# from transformations import *
 import os
 from pathlib import Path
 from faker import Faker
 import yaml
+import json
+from os import system, chdir
+import traceback
 
 console = Console()
 log = logging.getLogger("rich")
 ENV_FILENAME = ".orm-content-grabber"
 
-VERSION = "0.1.0"
+VERSION = "0.1.1"
 
 
 # Check if the .promptlab file exists in the home directory
@@ -62,6 +63,10 @@ def save_file(fn, data):
         f.write(data)
 
 
+def directory_name_from_metadata(metadata):
+    return f"{metadata['identifier']}-{slugify(metadata['title'][:40])}"
+
+
 # *****************************************************************************************
 # General functions
 # *****************************************************************************************
@@ -70,6 +75,7 @@ def save_file(fn, data):
 def cleaned_metadata(data):
     # pull out fields of interest
     out = {}
+    out["identifier"] = data["identifier"]
     out["title"] = data["title"]
     out["authors"] = data["orderable_author"]
     out["topics"] = coalesce_on_key(data["topics"], "name")
@@ -89,16 +95,25 @@ def fetch_metadata(work):
     return fetch_url(url)
 
 
+def create_directory_if_not_exists(directory):
+    directory = os.path.expanduser(directory)
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+
 # *****************************************************************************************
 # Functions related to fetching a transcript
 # *****************************************************************************************
 
 
-def fetch_url(url):
+def fetch_url(url, format="json"):
     console.log("[bold]Fetching... [/]: [italic]" + url + "[/]")
     headers = {"Authorization": f"Bearer {os.getenv('ORM_JWT')}"}
     r = requests.get(url, headers=headers)
-    return r.json()
+    if format == "html":
+        return r.text
+    else:
+        return r.json()
 
 
 # Fetch the table of contents given a work
@@ -145,22 +160,22 @@ def fetch_transcript_by_url(url):
     return transcript
 
 
-def action_load_transcript():
+def action_fetch_transcript(metadata):
 
     # Get the metadata for the work
-    metadata = fetch_metadata(args.work)
     metadata = cleaned_metadata(metadata)
     # Convert the metadata to yaml
     save_file("metadata.yaml", yaml.dump(metadata))
     # print(yaml.dump(metadata))
 
     # Fetch the work's table of contents
-    toc_url = fetch_toc_url(args.work)
+    toc_url = fetch_toc_url(args.identifier)
     toc = fetch_url(toc_url)
-
     flattened_toc = flatten_toc(toc)
+    dir = directory_name_from_metadata(metadata)
+    create_directory_if_not_exists(dir)
     for idx, t in enumerate(flattened_toc):
-        url = fetch_transcript_url(args.work, t["metadata"]["full_path"])
+        url = fetch_transcript_url(args.identifier, t["metadata"]["full_path"])
         transcript = fetch_transcript_by_url(url)
 
         fn = f"{idx:05d}-{slugify(t['title'])}.md"
@@ -168,7 +183,23 @@ def action_load_transcript():
         if t["metadata"]["depth"] > 1:
             level = "##"
         md = f"{level} {t['title']}\n\n{transcript}"
-        save_file(fn, md)
+        save_file(dir + "/" + fn, md)
+
+
+def action_fetch_book(metadata):
+    dir = directory_name_from_metadata(metadata)
+    create_directory_if_not_exists(dir)
+    for idx, url in enumerate(metadata["chapters"]):
+        print(f"Fetching chapter {idx} from {url}")
+        chapter_metadata = fetch_url(url)
+        try:
+            chapter_fn = chapter_metadata["filename"].split(".")[0]
+        except:
+            chapter_fn = ""
+        fn = f"{idx:05d}-{chapter_fn}-{slugify(chapter_metadata['title'])}.html"
+        console.log(f"Fetching content from {chapter_metadata['content']}")
+        content = fetch_url(chapter_metadata["content"], format="html")
+        save_file(dir + "/" + fn, content)
 
 
 # *****************************************************************************************
@@ -178,14 +209,18 @@ def action_load_transcript():
 
 def define_arguments(argString=None):
 
-    parser = argparse.ArgumentParser(
-        description="Fetch O'Reilly Content",
-        exit_on_error=False,
-    )
+    parser = ArgumentParser(description="Fetch O'Reilly Content", exit_on_error=False)
 
     ACTIONS = [
         "auth",
         "transcript",
+        "fetch",
+        "ls",
+        "cd",
+        "mkdir",
+        "pwd",
+        "version",
+        "metadata",
     ]
 
     parser.add_argument(
@@ -195,8 +230,13 @@ def define_arguments(argString=None):
     )
 
     parser.add_argument(
-        "--work", help="Work to use", required=False, default="9781098115302"
+        "--identifier",
+        help="Identifier to use",
+        required=False,
+        default="9781098115302",
     )
+
+    parser.add_argument("--dir", help="Directory name", required=False)
 
     if argString:
         return parser.parse_args(shlex_split(argString))
@@ -206,13 +246,66 @@ def define_arguments(argString=None):
 
 def process_command():
 
+    if args.action == "version":
+        print(f"Version: {VERSION}")
+        return
+
     if args.action == "auth":
         action_set_credentials()
 
-    if args.action == "transcript":
-        if args.work is None:
+    if args.action == "fetch":
+        if args.identifier is None:
             raise Exception("You must provide a --work argument for the work to load")
-        action_load_transcript()
+        # Check that they have a JWT
+        if load_env() is False:
+            action_set_api_key()
+            load_env()
+        # Grab and save the metadata
+        metadata = fetch_metadata(args.identifier)
+        if metadata["content_format"] == "book":
+            console.log(f"Fetching contents of book {metadata['title']}")
+            action_fetch_book(metadata)
+            save_file("metadata.yaml", yaml.dump(cleaned_metadata(metadata)))
+        # Get the content, which depends on the format
+        elif metadata["content_format"] == "video":
+            console.log(f"Fetching contents of video {metadata['title']}")
+            action_fetch_transcript(metadata)
+            save_file("metadata.yaml", yaml.dump(cleaned_metadata(metadata)))
+        # Get the content, which depends on the format
+        else:
+            print(f"Can't get content format {metadata['content_format']}")
+        return
+
+    if args.action == "ls":
+        num_files = len(glob.glob("*"))
+        if num_files > 15:
+            system("ls -l | more")
+        else:
+            system("ls -l")
+        return
+
+    if args.action == "cd":
+        if not args.dir:
+            raise Exception("You must provide a --dir=<directory>")
+        path = os.path.expanduser(args.dir)
+        chdir(path)
+        return
+
+    if args.action == "mkdir":
+        if not args.dir:
+            raise Exception("You must provide a --dir=<directory>")
+        os.mkdir(args.dir)
+        return
+
+    if args.action == "pwd":
+        print(os.getcwd())
+        return
+
+    if args.action == "metadata":
+        metadata = fetch_metadata(args.identifier)
+        print(yaml.dump(cleaned_metadata(metadata)))
+        print(directory_name_from_metadata(cleaned_metadata(metadata)))
+        return
 
 
 # *****************************************************************************************
@@ -223,13 +316,14 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         args = define_arguments()
         process_command()
-        # try:
-        #    process_command()
-        # except Exception as e:
-        #    console.log("[red]An error occurred on this request[/red]")
-        #    console.log(" ".join(sys.argv))
-        #    console.log(f"\nThe following error occurred:\n\n[red]{e}[/red]\n")
-        #    sys.exit(1)
+        try:
+            process_command()
+        except Exception as e:
+            console.log("[red]An error occurred on this request[/red]")
+            console.log(" ".join(sys.argv))
+            console.log(f"\nThe following error occurred:\n\n[red]{e}[/red]\n")
+            print(traceback.format_exc())
+            sys.exit(1)
     else:
         Art = text2art("Grabbah")
         print(f"[green]{Art}")
@@ -248,3 +342,4 @@ if __name__ == "__main__":
                 console.log("[red]An error occurred on this request[/red]")
                 console.log(" ".join(sys.argv))
                 console.log(f"\nThe following error occurred:\n\n[red]{e}[/red]\n")
+                print(traceback.format_exc())
