@@ -1,0 +1,8 @@
+# Create a new prpomptlab database
+init
+# Load files in from the source
+load --fn=source/*.html
+# Convert files to markdown
+transform --transformation="html2md"
+# Print out the contents
+blocks

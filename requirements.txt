@@ -7,3 +7,5 @@ rich
 pyyaml
 art
 prompt_toolkit
+cookiecutter
+ebooklib

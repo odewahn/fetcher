@@ -28,11 +28,20 @@ From the root directory, run the following command:
 
 pyinstaller \
  --name=grabbah \
+ --add-data="project_template:project_template" \
+ --hidden-import=cookiecutter \
+ --hidden-import=cookiecutter.main \
+ --hidden-import=cookiecutter.extensions \
  --hidden-import=prompt_toolkit \
  --hidden-import=slugify \
  --noconfirm \
+ --clean \
  main.py
 
+# This line is necessary because cookiecutter wants to read this file
+
+mkdir -p dist/grabbah/_internal/cookiecutter
+echo "2.6.0" > dist/grabbah/_internal/cookiecutter/VERSION.txt
 ```
 
 To view the sizes of the included files, cd into the `dist/_internal` directory and run:
@@ -42,3 +51,13 @@ du -hs *
 ```
 
 Originally, I compiled this using `--onefile` but found that it became incredibly slow to start up. Ths seems to be a common complaint about pyinstaller. I think it also has to do with a virus scanner, which has to scan each file in the package as it's unzipped every time. So, I started just directibuting the dist folder. It's less convenient and clear, but gives an acceptable startup time.
+
+# Notes
+
+https://cookiecutter.readthedocs.io/en/1.7.0/advanced/calling_from_python.html
+
+When testing cookiecutter:
+
+```
+init --identifier=9781491973882 --dir=~/Desktop/content
+```

@@ -5,7 +5,6 @@ from rich.table import Table
 from dotenv import load_dotenv, find_dotenv
 from ebooklib import epub
 from bs4 import BeautifulSoup
-import sqlite3
 from jinja2 import Template
 import sys
 import logging
@@ -18,11 +17,10 @@ from prompt_toolkit import PromptSession
 from markdownify import markdownify as md
 import os
 from pathlib import Path
-from faker import Faker
 import yaml
-import json
 from os import system, chdir
 import traceback
+from cookiecutter.main import cookiecutter
 
 console = Console()
 log = logging.getLogger("rich")
@@ -57,7 +55,7 @@ def action_set_credentials():
 
 def coalesce_on_key(data, key):
     out = [d[key] for d in data if key in d]
-    return ", ".join(out)
+    return "; ".join(out)
 
 
 def save_file(fn, data):
@@ -95,12 +93,6 @@ def fetch_metadata(work):
     url = f"https://learning.oreilly.com/api/v1/book/{work}/"
     console.log("[bold]Fetching... [/]: [italic]" + url + "[/]")
     return fetch_url(url)
-
-
-def create_directory_if_not_exists(directory):
-    directory = os.path.expanduser(directory)
-    if not os.path.exists(directory):
-        os.makedirs(directory)
 
 
 # *****************************************************************************************
@@ -174,8 +166,6 @@ def action_fetch_transcript(metadata):
     toc_url = fetch_toc_url(args.identifier)
     toc = fetch_url(toc_url)
     flattened_toc = flatten_toc(toc)
-    dir = directory_name_from_metadata(metadata)
-    create_directory_if_not_exists(dir)
     for idx, t in enumerate(flattened_toc):
         url = fetch_transcript_url(args.identifier, t["metadata"]["full_path"])
         transcript = fetch_transcript_by_url(url)
@@ -185,12 +175,10 @@ def action_fetch_transcript(metadata):
         if t["metadata"]["depth"] > 1:
             level = "##"
         md = f"{level} {t['title']}\n\n{transcript}"
-        save_file(dir + "/" + fn, md)
+        save_file(fn, md)
 
 
 def action_fetch_book(metadata):
-    dir = directory_name_from_metadata(metadata)
-    create_directory_if_not_exists(dir)
     for idx, url in enumerate(metadata["chapters"]):
         print(f"Fetching chapter {idx} from {url}")
         chapter_metadata = fetch_url(url)
@@ -201,7 +189,7 @@ def action_fetch_book(metadata):
         fn = f"{idx:05d}-{chapter_fn}-{slugify(chapter_metadata['title'])}.html"
         console.log(f"Fetching content from {chapter_metadata['content']}")
         content = fetch_url(chapter_metadata["content"], format="html")
-        save_file(dir + "/" + fn, content)
+        save_file(fn, content)
 
 
 def action_fetch():
@@ -210,12 +198,10 @@ def action_fetch():
     if metadata["content_format"] == "book":
         console.log(f"Fetching contents of book {metadata['title']}")
         action_fetch_book(metadata)
-        save_file("metadata.yaml", yaml.dump(cleaned_metadata(metadata)))
     # Get the content, which depends on the format
     elif metadata["content_format"] == "video":
         console.log(f"Fetching contents of video {metadata['title']}")
         action_fetch_transcript(metadata)
-        save_file("metadata.yaml", yaml.dump(cleaned_metadata(metadata)))
     # Get the content, which depends on the format
     else:
         print(f"Can't get content format {metadata['content_format']}")
@@ -233,6 +219,19 @@ def action_fetch_from_file():
         action_fetch()
     globals()["args"].identifier = None
     return
+
+
+def init_cookiecutter(project_name, metadata):
+    script_path = os.path.dirname(os.path.realpath(__file__))
+    # Join the filename with the script path
+    fn = os.path.join(script_path, "project_template/")
+    cookiecutter(
+        fn,
+        no_input=True,
+        extra_context={"project_name": project_name, **metadata},
+        output_dir=os.path.expanduser(args.dir),
+        overwrite_if_exists=True,
+    )
 
 
 # *****************************************************************************************
@@ -254,6 +253,7 @@ def define_arguments(argString=None):
         "pwd",
         "version",
         "metadata",
+        "init",
     ]
 
     parser.add_argument(
@@ -330,6 +330,23 @@ def process_command():
         metadata = fetch_metadata(args.identifier)
         print(yaml.dump(cleaned_metadata(metadata)))
         print(directory_name_from_metadata(cleaned_metadata(metadata)))
+        return
+
+    if args.action == "init":
+        if args.identifier is None:
+            raise Exception("You must provide an --identifier=<identifier>")
+        if args.dir is None:
+            raise Exception("You must provide a --dir=<directory>")
+        metadata = fetch_metadata(args.identifier)
+        metadata = cleaned_metadata(metadata)
+        project_name = directory_name_from_metadata(metadata)
+        full_path = os.path.expanduser(args.dir) + "/" + project_name
+        init_cookiecutter(project_name, metadata)
+        # write metadata yml file file to the project
+        save_file(f"{full_path}/metadata.yaml", yaml.dump(metadata))
+        # Change to the source directory in the new project
+        chdir(full_path + "/source")
+        action_fetch()
         return
 
 
