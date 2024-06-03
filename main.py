@@ -216,7 +216,24 @@ def action_fetch_from_file():
         print(f"Fetching {identifier}")
         # set the globals args identifier to the current identifier
         globals()["args"].identifier = identifier
+        if load_env() is False:
+            action_set_api_key()
+            load_env()
+        metadata = fetch_metadata(args.identifier)
+        metadata = cleaned_metadata(metadata)
+        project_name = directory_name_from_metadata(metadata)
+        full_path = os.path.expanduser(args.dir) + "/" + project_name
+        init_cookiecutter(project_name, metadata)
+        # write metadata yml file file to the project
+        save_file(f"{full_path}/metadata.yaml", yaml.dump(metadata))
+        # Change to the source directory in the new project
+        # get the current directory
+        current = os.getcwd()
+        chdir(full_path + "/source")
         action_fetch()
+        # Change back to the original directory
+        chdir(current)
+
     globals()["args"].identifier = None
     return
 
@@ -348,8 +365,12 @@ def process_command():
         # write metadata yml file file to the project
         save_file(f"{full_path}/metadata.yaml", yaml.dump(metadata))
         # Change to the source directory in the new project
+        # get the current directory
+        current = os.getcwd()
         chdir(full_path + "/source")
         action_fetch()
+        # Change back to the original directory
+        chdir(current)
         return
 
 
@@ -370,11 +391,11 @@ if __name__ == "__main__":
             print(traceback.format_exc())
             sys.exit(1)
     else:
-        Art = text2art("Grabbah")
+        Art = text2art("Fetcher")
         print(f"[green]{Art}")
         session = PromptSession()
         while True:
-            argString = session.prompt("grabbah> ")
+            argString = session.prompt("fetcher> ")
             # If the user just hits enter, skip parsing because it will exit the program
             if len(argString) == 0:
                 continue

@@ -1,3 +1,7 @@
+# Fetcher
+
+Fetch content from the O'Reilly Learning platform to store it locally.
+
 # Before you start -- Get a long-lived JWT
 
 Ask U&A to to generate a long-lived jwt for me against prod as described in devdocs:
@@ -52,7 +56,7 @@ From the root directory, run the following command:
 ```
 
 pyinstaller \
- --name=grabbah \
+ --name=fetcher \
  --add-data="project_template:project_template" \
  --hidden-import=cookiecutter \
  --hidden-import=cookiecutter.main \
@@ -65,8 +69,8 @@ pyinstaller \
 
 # This line is necessary because cookiecutter wants to read this file
 
-mkdir -p dist/grabbah/_internal/cookiecutter
-echo "2.6.0" > dist/grabbah/_internal/cookiecutter/VERSION.txt
+mkdir -p dist/fetcher/_internal/cookiecutter
+echo "2.6.0" > dist/fetcher/_internal/cookiecutter/VERSION.txt
 ```
 
 To view the sizes of the included files, cd into the `dist/_internal` directory and run:
