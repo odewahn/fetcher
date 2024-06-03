@@ -264,7 +264,7 @@ def define_arguments(argString=None):
 
     parser.add_argument("--identifier", help="Identifier to use", required=False)
 
-    parser.add_argument("--dir", help="Directory name", required=False)
+    parser.add_argument("--dir", help="Directory name", required=False, default=".")
 
     parser.add_argument("--file", help="File of works to fetch from", required=False)
 

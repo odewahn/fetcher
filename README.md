@@ -1,11 +1,36 @@
-# Usage
-
-## Get a long-lived JWT
+# Before you start -- Get a long-lived JWT
 
 Ask U&A to to generate a long-lived jwt for me against prod as described in devdocs:
 
 ```
 ../manage.py generate_jwt odewahn+admin@oreilly.com --expiration-minutes=525600
+```
+
+# Usage
+
+## `auth`
+
+Authenticate with the O'Reilly Learning platform. Use the long running JWT you obtained from U&A. Note that this value will be saved in a file in your home directory, so be sure to keep it secure.
+
+### Example
+
+```
+auth
+```
+
+## `init`
+
+Create a new project by pulling it from the O'Reilly Learning platform.
+
+### Arguments
+
+- `--identifier` (required): The identifier of the project you want to pull. You'll typically find this in the URL of the project on the O'Reilly Learning platform.
+- `--directory` (optional): The directory where you want to create the project. If not specified, the project will be created in the current directory.
+
+### Example
+
+```
+init --identifier=9781491973882 --directory=~/Desktop/content
 ```
 
 # Development
