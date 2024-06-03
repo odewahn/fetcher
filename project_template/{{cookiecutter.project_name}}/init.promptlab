@@ -1,7 +1,11 @@
 # Create a new prpomptlab database
 init
+# Change to the source directory
+cd --dir=source
 # Load files in from the source
-load --fn=source/*.html
+load --db=../promptlab.db --fn=*.html
+# Go back to root
+cd --dir=..
 # Convert files to markdown
 transform --transformation="html2md"
 # Print out the contents

@@ -337,6 +337,9 @@ def process_command():
             raise Exception("You must provide an --identifier=<identifier>")
         if args.dir is None:
             raise Exception("You must provide a --dir=<directory>")
+        if load_env() is False:
+            action_set_api_key()
+            load_env()
         metadata = fetch_metadata(args.identifier)
         metadata = cleaned_metadata(metadata)
         project_name = directory_name_from_metadata(metadata)
