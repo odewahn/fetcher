@@ -391,7 +391,7 @@ if __name__ == "__main__":
             print(traceback.format_exc())
             sys.exit(1)
     else:
-        Art = text2art("Fetcher")
+        Art = text2art("fetcher")
         print(f"[green]{Art}")
         session = PromptSession()
         while True:

@@ -81,6 +81,37 @@ du -hs *
 
 Originally, I compiled this using `--onefile` but found that it became incredibly slow to start up. Ths seems to be a common complaint about pyinstaller. I think it also has to do with a virus scanner, which has to scan each file in the package as it's unzipped every time. So, I started just directibuting the dist folder. It's less convenient and clear, but gives an acceptable startup time.
 
+# Build executable part II with codesigning
+
+## Building the binary
+
+Go through all the rigamarole to build the binary.
+
+First, set up the keychain stuff:
+
+xcrun notarytool store-credentials ODEWAHN \
+ --apple-id andrew@odewahn.com \
+ --team-id 8R36RY2J2J
+
+## To build:
+
+```
+pyinstaller --noconfirm --clean fetcher.spec
+```
+
+## To package, sign, and notarize
+
+This tool does all the steps in a nice package:
+
+https://github.com/txoof/codesign
+
+Note that I renamed it `pycodesign` when I downloaded it, even though it's called `pycodesign.py` when you download it from the repo.
+
+```
+cd dist
+pycodesign ../pycodesign.ini
+```
+
 # Notes
 
 https://cookiecutter.readthedocs.io/en/1.7.0/advanced/calling_from_python.html
@@ -90,3 +121,7 @@ When testing cookiecutter:
 ```
 init --identifier=9781491973882 --dir=~/Desktop/content
 ```
+
+import zipfile
+zip = zipfile.ZipFile("dist/fetcher")
+print (zip.namelist())
