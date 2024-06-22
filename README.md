@@ -83,6 +83,13 @@ Originally, I compiled this using `--onefile` but found that it became incredibl
 
 # Build executable part II with codesigning
 
+## Before you start
+
+Set up all the stuff apple requires, as described in the "Setup" section of https://github.com/txoof/codesign/blob/main/Signing_and_Notarizing_HOWTO.md:
+
+- Developer ID Application certificate
+- Developer ID Installer certificate
+
 ## Building the binary
 
 Go through all the rigamarole to build the binary.
@@ -121,7 +128,3 @@ When testing cookiecutter:
 ```
 init --identifier=9781491973882 --dir=~/Desktop/content
 ```
-
-import zipfile
-zip = zipfile.ZipFile("dist/fetcher")
-print (zip.namelist())
