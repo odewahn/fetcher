@@ -24,14 +24,14 @@ from cookiecutter.main import cookiecutter
 
 console = Console()
 log = logging.getLogger("rich")
-ENV_FILENAME = ".orm-content-grabber"
+ENV_FILENAME = ".fetcher"
 
-VERSION = "0.1.1"
+VERSION = "0.2.0"
 
 global args
 
 
-# Check if the .promptlab file exists in the home directory
+# Check if the .fetcher file exists in the home directory
 def load_env():
     home = str(Path.home())
     if not os.path.isfile(home + "/" + ENV_FILENAME):
@@ -53,6 +53,8 @@ def action_set_credentials():
     console.log(f"JWT saved in {home}/{ENV_FILENAME}")
 
 
+# Returns a ; delimited string based on a key extracted from an array of dictionaries
+# Mostly used when processing product metadata
 def coalesce_on_key(data, key):
     out = [d[key] for d in data if key in d]
     return "; ".join(out)
