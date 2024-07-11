@@ -30,11 +30,18 @@ Create a new project by pulling it from the O'Reilly Learning platform.
 
 - `--identifier` (required): The identifier of the project you want to pull. You'll typically find this in the URL of the project on the O'Reilly Learning platform.
 - `--directory` (optional): The directory where you want to create the project. If not specified, the project will be created in the current directory.
+- `--transcript` (optional): If specified, the html for a transcript will be converted to a srt formatted transcript.
 
 ### Example
 
 ```
 init --identifier=9781491973882 --directory=~/Desktop/content
+```
+
+Pull a course and save the trnscript as a srt file:
+
+```
+init --identifier=0642572031428 --transcript
 ```
 
 # Development

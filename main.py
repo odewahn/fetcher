@@ -21,12 +21,13 @@ import yaml
 from os import system, chdir
 import traceback
 from cookiecutter.main import cookiecutter
+import json
 
 console = Console()
 log = logging.getLogger("rich")
 ENV_FILENAME = ".fetcher"
 
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 
 global args
 
@@ -147,12 +148,30 @@ def flatten_toc(toc, out=[], depth=0):
 def fetch_transcript_by_url(url):
     console.log("[bold]Parsing... [/]: [italic]" + url + "[/]")
     r = requests.get(url)
-    raw = r.text
-    soup = BeautifulSoup(raw, "html.parser")
-    transcript = ""
+    return r.text
+
+
+def convert_to_markdown(html):
+    soup = BeautifulSoup(html, "html.parser")
+    md = ""
     for p in soup.select(".transcript p"):
         text = p.select_one(".text").get_text()
-        transcript += text + " "
+        md += text + " "
+    return md
+
+
+def convert_to_transcript(html):
+    soup = BeautifulSoup(html, "html.parser")
+    transcript = ""
+    idx = 1
+    for p in soup.select(".transcript p"):
+        begin_time = p.select_one(".begin")["title"]
+        end_time = p.select_one(".end")["title"]
+        text = p.select_one(".text").get_text()
+        transcript += str(idx) + "\n"
+        transcript += f"{begin_time} --> {end_time}\n"
+        transcript += text + "\n\n"
+        idx += 1
     return transcript
 
 
@@ -172,12 +191,17 @@ def action_fetch_transcript(metadata):
         url = fetch_transcript_url(args.identifier, t["metadata"]["full_path"])
         transcript = fetch_transcript_by_url(url)
 
-        fn = f"{idx:05d}-{slugify(t['title'])}.md"
-        level = "#"
-        if t["metadata"]["depth"] > 1:
-            level = "##"
-        md = f"{level} {t['title']}\n\n{transcript}"
-        save_file(fn, md)
+        if args.transcript:
+            transcript = convert_to_transcript(transcript)
+            save_file(f"{idx:05d}-{slugify(t['title'])}.txt", transcript)
+        else:
+            transcript = convert_to_markdown(transcript)
+            fn = f"{idx:05d}-{slugify(t['title'])}.md"
+            level = "#"
+            if t["metadata"]["depth"] > 1:
+                level = "##"
+            md = f"{level} {t['title']}\n\n{transcript}"
+            save_file(fn, md)
 
 
 def action_fetch_book(metadata):
@@ -286,6 +310,14 @@ def define_arguments(argString=None):
     parser.add_argument("--dir", help="Directory name", required=False, default=".")
 
     parser.add_argument("--file", help="File of works to fetch from", required=False)
+
+    parser.add_argument(
+        "--transcript",
+        help="Don't do any content conversions on download (e.g., for a course just get raw transcript)",
+        required=False,
+        default=False,
+        action=BooleanOptionalAction,
+    )
 
     if argString:
         return parser.parse_args(shlex_split(argString))
