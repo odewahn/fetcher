@@ -9,3 +9,6 @@ art
 prompt_toolkit
 cookiecutter
 ebooklib
+pyinstaller
+aiohttp
+

@@ -21,6 +21,8 @@ import yaml
 from os import system, chdir
 import traceback
 from cookiecutter.main import cookiecutter
+import aiohttp
+import asyncio
 import json
 
 console = Console()
@@ -111,6 +113,16 @@ def fetch_url(url, format="json"):
         return r.text
     else:
         return r.json()
+
+
+async def async_fetch_url(session, url, format="json"):
+    console.log("[bold]Fetching... [/]: [italic]" + url + "[/]")
+    headers = {"Authorization": f"Bearer {os.getenv('ORM_JWT')}"}
+    async with session.get(url, headers=headers) as r:
+        if format == "html":
+            return await r.text()
+        else:
+            return await r.json()
 
 
 # Fetch the table of contents given a work
@@ -204,26 +216,51 @@ def action_fetch_transcript(metadata):
             save_file(fn, md)
 
 
-def action_fetch_book(metadata):
-    for idx, url in enumerate(metadata["chapters"]):
-        print(f"Fetching chapter {idx} from {url}")
-        chapter_metadata = fetch_url(url)
-        try:
-            chapter_fn = chapter_metadata["filename"].split(".")[0]
-        except:
-            chapter_fn = ""
-        fn = f"{idx:05d}-{chapter_fn}-{slugify(chapter_metadata['title'])}.html"
-        console.log(f"Fetching content from {chapter_metadata['content']}")
-        content = fetch_url(chapter_metadata["content"], format="html")
-        save_file(fn, content)
+async def fetch_book_chapter_metadata(metadata):
+    results = []
+    headers = {"Authorization": f"Bearer {os.getenv('ORM_JWT')}"}
+    async with aiohttp.ClientSession() as session:
+        for idx, url in enumerate(metadata["chapters"]):
+            async with session.get(url, headers=headers) as response:
+                print(f"Fetching chapter metadata {idx} from {url}")
+                chapter_metadata = await response.json()
+            results.append(
+                {
+                    "filename": chapter_metadata["filename"],
+                    "chapter_metadata": chapter_metadata,
+                }
+            )
+    print(json.dumps(results, indent=2))
+    return results
 
 
-def action_fetch():
+async def action_fetch_book(metadata):
+    headers = {"Authorization": f"Bearer {os.getenv('ORM_JWT')}"}
+    book_chapter_metadata = await fetch_book_chapter_metadata(metadata)
+    async with aiohttp.ClientSession() as session:
+        for idx, url in enumerate(metadata["chapters"]):
+            async with session.get(url, headers=headers) as response:
+                print(f"Fetching chapter {idx} from {url}")
+                chapter_metadata = await response.json()
+            try:
+                chapter_fn = chapter_metadata["filename"].split(".")[0]
+            except:
+                chapter_fn = ""
+            fn = f"{idx:05d}-{chapter_fn}-{slugify(chapter_metadata['title'])}.html"
+            console.log(f"Fetching content from {chapter_metadata['content']}")
+            async with session.get(
+                chapter_metadata["content"], headers=headers
+            ) as response:
+                content = await response.text()
+            save_file(fn, content)
+
+
+async def action_fetch():
     # Grab and save the metadata
     metadata = fetch_metadata(args.identifier)
     if metadata["content_format"] == "book":
         console.log(f"Fetching contents of book {metadata['title']}")
-        action_fetch_book(metadata)
+        await action_fetch_book(metadata)
     # Get the content, which depends on the format
     elif metadata["content_format"] == "video":
         console.log(f"Fetching contents of video {metadata['title']}")
@@ -233,7 +270,7 @@ def action_fetch():
         print(f"Can't get content format {metadata['content_format']}")
 
 
-def action_fetch_from_file():
+async def action_fetch_from_file():
     with open(args.file) as f:
         identifiers = f.readlines()
     # Remove whitespace characters like `\n` at the end of each line
@@ -256,7 +293,7 @@ def action_fetch_from_file():
         # get the current directory
         current = os.getcwd()
         chdir(full_path + "/source")
-        action_fetch()
+        await action_fetch()
         # Change back to the original directory
         chdir(current)
 
@@ -325,7 +362,7 @@ def define_arguments(argString=None):
         return parser.parse_args()
 
 
-def process_command():
+async def process_command():
 
     if args.action == "version":
         print(f"Version: {VERSION}")
@@ -347,7 +384,7 @@ def process_command():
             load_env()
         # Fetch the content.  If there is an identifier, then fetch that.  If there is a file, then fetch from the file
         if args.identifier:
-            action_fetch()
+            await action_fetch()
         else:
             action_fetch_from_file()
         return
@@ -402,22 +439,19 @@ def process_command():
         # get the current directory
         current = os.getcwd()
         chdir(full_path + "/source")
-        action_fetch()
+        await action_fetch()
         # Change back to the original directory
         chdir(current)
         return
 
 
-# *****************************************************************************************
-# Main
-# *****************************************************************************************
-if __name__ == "__main__":
-
+async def main():
+    global args
     if len(sys.argv) > 1:
         args = define_arguments()
-        process_command()
+        await process_command()
         try:
-            process_command()
+            await process_command()
         except Exception as e:
             console.log("[red]An error occurred on this request[/red]")
             console.log(" ".join(sys.argv))
@@ -429,7 +463,7 @@ if __name__ == "__main__":
         print(f"[green]{Art}")
         session = PromptSession()
         while True:
-            argString = session.prompt("fetcher> ")
+            argString = await session.prompt_async("fetcher> ")
             # If the user just hits enter, skip parsing because it will exit the program
             if len(argString) == 0:
                 continue
@@ -437,9 +471,18 @@ if __name__ == "__main__":
                 break
             try:
                 args = define_arguments(argString)
-                process_command()
+                await process_command()
             except Exception as e:
                 console.log("[red]An error occurred on this request[/red]")
                 console.log(" ".join(sys.argv))
                 console.log(f"\nThe following error occurred:\n\n[red]{e}[/red]\n")
                 print(traceback.format_exc())
+
+
+# *****************************************************************************************
+# Main
+# *****************************************************************************************
+if __name__ == "__main__":
+    os.chdir("/Users/odewahn/Desktop/tmp/content")
+    # init --identifier=9781098153427
+    asyncio.run(main())
