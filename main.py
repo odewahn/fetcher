@@ -29,7 +29,7 @@ console = Console()
 log = logging.getLogger("rich")
 ENV_FILENAME = ".fetcher"
 
-VERSION = "0.3.0"
+VERSION = "0.3.1"
 
 global args
 
@@ -96,7 +96,7 @@ def cleaned_metadata(data):
 
 def fetch_metadata(work):
     url = f"https://learning.oreilly.com/api/v1/book/{work}/"
-    console.log("[bold]Fetching... [/]: [italic]" + url + "[/]")
+    console.log("[bold]Fetching in fetch_metadata... [/]: [italic]" + url + "[/]")
     return fetch_url(url)
 
 
@@ -106,7 +106,7 @@ def fetch_metadata(work):
 
 
 def fetch_url(url, format="json"):
-    console.log("[bold]Fetching... [/]: [italic]" + url + "[/]")
+    console.log("[bold]Fetching in fetch_url... [/]: [italic]" + url + "[/]")
     headers = {"Authorization": f"Bearer {os.getenv('ORM_JWT')}"}
     r = requests.get(url, headers=headers)
     if format == "html":
@@ -116,7 +116,7 @@ def fetch_url(url, format="json"):
 
 
 async def async_fetch_url(session, url, format="json"):
-    console.log("[bold]Fetching... [/]: [italic]" + url + "[/]")
+    console.log("[bold]Fetching in async_fetch_url ... [/]: [italic]" + url + "[/]")
     headers = {"Authorization": f"Bearer {os.getenv('ORM_JWT')}"}
     async with session.get(url, headers=headers) as r:
         if format == "html":
@@ -216,43 +216,24 @@ def action_fetch_transcript(metadata):
             save_file(fn, md)
 
 
-async def fetch_book_chapter_metadata(metadata):
-    results = []
-    headers = {"Authorization": f"Bearer {os.getenv('ORM_JWT')}"}
-    async with aiohttp.ClientSession() as session:
-        for idx, url in enumerate(metadata["chapters"]):
-            async with session.get(url, headers=headers) as response:
-                print(f"Fetching chapter metadata {idx} from {url}")
-                chapter_metadata = await response.json()
-            results.append(
-                {
-                    "filename": chapter_metadata["filename"],
-                    "chapter_metadata": chapter_metadata,
-                }
-            )
-    print(json.dumps(results, indent=2))
-    return results
-
-
 async def action_fetch_book(metadata):
     headers = {"Authorization": f"Bearer {os.getenv('ORM_JWT')}"}
-    book_chapter_metadata = await fetch_book_chapter_metadata(metadata)
     async with aiohttp.ClientSession() as session:
-        for idx, url in enumerate(metadata["chapters"]):
-            async with session.get(url, headers=headers) as response:
-                print(f"Fetching chapter {idx} from {url}")
-                chapter_metadata = await response.json()
-            try:
-                chapter_fn = chapter_metadata["filename"].split(".")[0]
-            except:
-                chapter_fn = ""
-            fn = f"{idx:05d}-{chapter_fn}-{slugify(chapter_metadata['title'])}.html"
-            console.log(f"Fetching content from {chapter_metadata['content']}")
-            async with session.get(
-                chapter_metadata["content"], headers=headers
-            ) as response:
-                content = await response.text()
-            save_file(fn, content)
+        # Fetch the metadata about each chapter
+        chapters_metadata = await asyncio.gather(
+            *[async_fetch_url(session, url) for url in metadata["chapters"]]
+        )
+        # Fetch content of each chapter based on the medata file.  This maps 1:1 to the metadata
+        chapters_content = await asyncio.gather(
+            *[
+                async_fetch_url(session, chapter["content"], "html")
+                for chapter in chapters_metadata
+            ]
+        )
+        # Save indifidual chapters to disk
+        for idx, chapter in enumerate(chapters_content):
+            fn = f"{idx:05d}-{slugify(chapters_metadata[idx]['title'])}.html"
+            save_file(fn, chapter)
 
 
 async def action_fetch():
