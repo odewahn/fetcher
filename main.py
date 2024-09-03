@@ -1,31 +1,40 @@
-from argparse import ArgumentParser, BooleanOptionalAction
+# For pyinstaller, we want to show something as quickly as possible
+print("Starting.  This may take a minute, so please be patient...")
 from rich.console import Console
-from rich import print
-from rich.table import Table
-from dotenv import load_dotenv, find_dotenv
-from ebooklib import epub
-from bs4 import BeautifulSoup
-from jinja2 import Template
-import sys
-import logging
-import requests
-import glob
-from slugify import slugify
-from shlex import split as shlex_split
-from art import text2art
-from prompt_toolkit import PromptSession
-from markdownify import markdownify as md
-import os
-from pathlib import Path
-import yaml
-from os import system, chdir
-import traceback
-from cookiecutter.main import cookiecutter
-import aiohttp
-import asyncio
-import json
+
 
 console = Console()
+
+# Set up a loading message as the libraries are loaded
+with console.status(f"[bold green]Loading required libraries...") as status:
+
+    from argparse import ArgumentParser, BooleanOptionalAction
+    from rich.console import Console
+    from rich import print
+    from rich.table import Table
+    from dotenv import load_dotenv, find_dotenv
+    from ebooklib import epub
+    from bs4 import BeautifulSoup
+    from jinja2 import Template
+    import sys
+    import logging
+    import requests
+    import glob
+    from slugify import slugify
+    from shlex import split as shlex_split
+    from art import text2art
+    from prompt_toolkit import PromptSession
+    from markdownify import markdownify as md
+    import os
+    from pathlib import Path
+    import yaml
+    from os import system, chdir
+    import traceback
+    from cookiecutter.main import cookiecutter
+    import aiohttp
+    import asyncio
+    import json
+
 log = logging.getLogger("rich")
 ENV_FILENAME = ".fetcher"
 
@@ -464,6 +473,6 @@ async def main():
 # Main
 # *****************************************************************************************
 if __name__ == "__main__":
-    os.chdir("/Users/odewahn/Desktop/tmp/content")
+    # os.chdir("/Users/odewahn/Desktop/tmp/content")
     # init --identifier=9781098153427
     asyncio.run(main())
