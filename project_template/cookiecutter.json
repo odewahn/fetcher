@@ -1,4 +1,6 @@
 {
   "project_name": "cookiecutter-test",
-  "title": "My Title, which should be the book title"
+  "title": "My Title, which should be the book title",
+  "identifier": "cookiecutter-test",
+  "authors": "Author Name"
 }

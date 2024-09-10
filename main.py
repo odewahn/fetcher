@@ -274,9 +274,7 @@ async def action_fetch_from_file():
             load_env()
         metadata = fetch_metadata(args.identifier)
         metadata = cleaned_metadata(metadata)
-        project_name = directory_name_from_metadata(metadata)
-        full_path = os.path.expanduser(args.dir) + "/" + project_name
-        init_cookiecutter(project_name, metadata)
+        full_path = init_cookiecutter(metadata)
         # write metadata yml file file to the project
         save_file(f"{full_path}/metadata.yaml", yaml.dump(metadata))
         # Change to the source directory in the new project
@@ -291,7 +289,10 @@ async def action_fetch_from_file():
     return
 
 
-def init_cookiecutter(project_name, metadata):
+def init_cookiecutter(metadata):
+    project_name = (
+        directory_name_from_metadata(metadata) if args.project is None else args.project
+    )
     script_path = os.path.dirname(os.path.realpath(__file__))
     # Join the filename with the script path
     fn = os.path.join(script_path, "project_template/")
@@ -302,6 +303,7 @@ def init_cookiecutter(project_name, metadata):
         output_dir=os.path.expanduser(args.dir),
         overwrite_if_exists=True,
     )
+    return os.path.expanduser(args.dir) + "/" + project_name
 
 
 # *****************************************************************************************
@@ -422,13 +424,7 @@ async def process_command():
             load_env()
         metadata = fetch_metadata(args.identifier)
         metadata = cleaned_metadata(metadata)
-        project_name = (
-            directory_name_from_metadata(metadata)
-            if args.project is None
-            else args.project
-        )
-        full_path = os.path.expanduser(args.dir) + "/" + project_name
-        init_cookiecutter(project_name, metadata)
+        full_path = init_cookiecutter(metadata)
         # write metadata yml file file to the project
         save_file(f"{full_path}/metadata.yaml", yaml.dump(metadata))
         # Change to the source directory in the new project
@@ -480,5 +476,5 @@ async def main():
 # *****************************************************************************************
 if __name__ == "__main__":
     # os.chdir("/Users/odewahn/Desktop/tmp/content")
-    # init --identifier=9781098153427
+    # init --identifier=9781098153427 --project=test2
     asyncio.run(main())
