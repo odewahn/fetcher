@@ -29,7 +29,8 @@ Create a new project by pulling it from the O'Reilly Learning platform.
 ### Arguments
 
 - `--identifier` (required): The identifier of the project you want to pull. You'll typically find this in the URL of the project on the O'Reilly Learning platform.
-- `--directory` (optional): The directory where you want to create the project. If not specified, the project will be created in the current directory.
+- `--project` (optional): If specified, the project will be created in a subdirectory of the current directory with the name of the project.
+- `--dir` (optional): The directory where you want to create the project. If not specified, the project will be created in the current directory.
 - `--transcript` (optional): If specified, the html for a transcript will be converted to a srt formatted transcript.
 
 ### Example

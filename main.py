@@ -38,7 +38,7 @@ with console.status(f"[bold green]Loading required libraries...") as status:
 log = logging.getLogger("rich")
 ENV_FILENAME = ".fetcher"
 
-VERSION = "0.3.1"
+VERSION = "0.3.2"
 
 global args
 
@@ -336,6 +336,8 @@ def define_arguments(argString=None):
 
     parser.add_argument("--dir", help="Directory name", required=False, default=".")
 
+    parser.add_argument("--project", help="Project name", required=False)
+
     parser.add_argument("--file", help="File of works to fetch from", required=False)
 
     parser.add_argument(
@@ -420,7 +422,11 @@ async def process_command():
             load_env()
         metadata = fetch_metadata(args.identifier)
         metadata = cleaned_metadata(metadata)
-        project_name = directory_name_from_metadata(metadata)
+        project_name = (
+            directory_name_from_metadata(metadata)
+            if args.project is None
+            else args.project
+        )
         full_path = os.path.expanduser(args.dir) + "/" + project_name
         init_cookiecutter(project_name, metadata)
         # write metadata yml file file to the project
