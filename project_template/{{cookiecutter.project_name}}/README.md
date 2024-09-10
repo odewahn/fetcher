@@ -1,9 +1,7 @@
 # {{cookiecutter.title}}
 
-This is a test from cookiecutter!
+See the [source](source/) for the content downloaded from the O'Reilly Learning platform.
 
-To get started, run promptlab and then:
-
-```
-run --fn=init.promptlab
-```
+Identifier: {{cookiecutter.identifier}}
+Title: {{cookiecutter.title}}
+Author(s): {{cookiecutter.authors}}
