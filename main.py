@@ -239,6 +239,12 @@ async def action_fetch_book(metadata):
                 for chapter in chapters_metadata
             ]
         )
+        # Save the metadata to disk
+        # Conver metadata array into a hash keyed on the filename from the filename field
+        chapters_metadata_out = {
+            chapter["filename"]: chapter for chapter in chapters_metadata
+        }
+        save_file("chapter-metadata.yaml", json.dumps(chapters_metadata_out, indent=4))
         # Save indifidual chapters to disk
         for idx, chapter in enumerate(chapters_content):
             fn = f"{idx:05d}-{slugify(chapters_metadata[idx]['title'])}.html"
@@ -475,6 +481,6 @@ async def main():
 # Main
 # *****************************************************************************************
 if __name__ == "__main__":
-    # os.chdir("/Users/odewahn/Desktop/tmp/content")
+    os.chdir("/Users/odewahn/Desktop/tmp/content")
     # init --identifier=9781098153427 --project=test2
     asyncio.run(main())
