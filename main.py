@@ -484,28 +484,16 @@ async def process_command():
         headers = {"Authorization": f"Bearer {os.getenv('ORM_JWT')}"}
         r = requests.get(url, headers=headers)
         data = r.json()
-        class SearchApp(App):
-            selected_id: Reactive[str] = Reactive("")
+        console = Console()
+        items = [f"{d['archive_id']} - {d['title']}" for d in data["results"][:10]]
+        for index, item in enumerate(items, start=1):
+            console.print(f"{index}. {item}")
 
-            async def on_mount(self):
-                items = [
-                    ListItem(Static(Text(f"{d['archive_id']} - {d['title']}"))) for d in data["results"][:10]
-                ]
-                self.list_view = ListView(*items)
-                await self.mount(self.list_view)
+        selected_index = int(input("Select an item by number (or 0 to cancel): ")) - 1
 
-            async def on_key(self, event: Key):
-                if event.key == "enter":
-                    self.selected_id = self.list_view.get_selected().text.split(" - ")[0]
-                    self.exit()
-                elif event.key == "escape":
-                    self.exit()
-
-        app = SearchApp()
-        await app.run_async()
-
-        if app.selected_id:
-            args.identifier = app.selected_id
+        if 0 <= selected_index < len(items):
+            selected_id = items[selected_index].split(" - ")[0]
+            args.identifier = selected_id
             await process_command()
 
 
