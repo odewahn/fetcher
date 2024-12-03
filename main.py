@@ -10,6 +10,10 @@ with console.status(f"[bold green]Loading required libraries...") as status:
 
     from argparse import ArgumentParser, BooleanOptionalAction
     from rich.console import Console
+    from textual.app import App
+    from textual.widgets import ListView, ListItem
+    from textual.reactive import Reactive
+    from textual.events import Key
     from rich import print
     from rich.table import Table
     from dotenv import load_dotenv, find_dotenv
@@ -470,17 +474,29 @@ async def process_command():
         headers = {"Authorization": f"Bearer {os.getenv('ORM_JWT')}"}
         r = requests.get(url, headers=headers)
         data = r.json()
-        out = Table(title="Search Results")
-        out.add_column("ID", style="cyan", no_wrap=True)
-        out.add_column("Format", style="magenta")
-        out.add_column("Publishers", style="magenta")
-        out.add_column("Title", style="magenta")
-        for d in data["results"][:10]:
-            out.add_row(
-                d["archive_id"], d["format"], ",".join(d["publishers"]), d["title"]
-            )
-        console.print(out)
-        return
+        class SearchApp(App):
+            selected_id: Reactive[str] = Reactive("")
+
+            async def on_mount(self):
+                items = [
+                    ListItem(f"{d['archive_id']} - {d['title']}") for d in data["results"][:10]
+                ]
+                self.list_view = ListView(*items)
+                await self.view.dock(self.list_view)
+
+            async def on_key(self, event: Key):
+                if event.key == "enter":
+                    self.selected_id = self.list_view.get_selected().text.split(" - ")[0]
+                    self.exit()
+                elif event.key == "escape":
+                    self.exit()
+
+        app = SearchApp()
+        await app.run_async()
+
+        if app.selected_id:
+            args.identifier = app.selected_id
+            await process_command()
 
 
 async def main():
