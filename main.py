@@ -488,7 +488,7 @@ async def process_command():
 
             async def on_mount(self):
                 items = [
-                    ListItem(f"{d['archive_id']} - {d['title']}") for d in data["results"][:10]
+                    ListItem(Text(f"{d['archive_id']} - {d['title']}")) for d in data["results"][:10]
                 ]
                 self.list_view = ListView(*items)
                 await self.view.dock(self.list_view)
