@@ -11,4 +11,5 @@ cookiecutter
 ebooklib
 pyinstaller
 aiohttp
+textual
 

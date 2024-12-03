@@ -10,6 +10,6 @@ build
 .env.old
 *.sqbpro
 .DS_Store
-*.spec
 __pycache__/
 *.zip
+.aider*

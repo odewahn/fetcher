@@ -68,6 +68,8 @@ def action_set_api_key():
     with open(home + "/" + ENV_FILENAME, "w") as f:
         f.write(f"ORM_API_KEY={api_key}")
     console.log(f"API key saved in {home}/{ENV_FILENAME}")
+
+
 def action_set_credentials():
     home = str(Path.home())
     # get user input for api key
@@ -397,6 +399,28 @@ def define_arguments(argString=None):
         return parser.parse_args()
 
 
+async def do_init_action():
+    if args.identifier is None:
+        raise Exception("You must provide an --identifier=<identifier>")
+    if args.dir is None:
+        raise Exception("You must provide a --dir=<directory>")
+    if load_env() is False:
+        action_set_api_key()
+        load_env()
+    metadata = fetch_metadata(args.identifier)
+    metadata = cleaned_metadata(metadata)
+    full_path = init_cookiecutter(metadata)
+    # write metadata yml file file to the project
+    save_file(f"{full_path}/metadata.yaml", yaml.dump(metadata))
+    # Change to the source directory in the new project
+    # get the current directory
+    current = os.getcwd()
+    chdir(full_path + "/source")
+    await action_fetch()
+    # Change back to the original directory
+    chdir(current)
+
+
 async def process_command():
 
     if args.action == "version":
@@ -456,36 +480,21 @@ async def process_command():
         return
 
     if args.action == "init":
-        if args.identifier is None:
-            raise Exception("You must provide an --identifier=<identifier>")
-        if args.dir is None:
-            raise Exception("You must provide a --dir=<directory>")
-        if load_env() is False:
-            action_set_api_key()
-            load_env()
-        metadata = fetch_metadata(args.identifier)
-        metadata = cleaned_metadata(metadata)
-        full_path = init_cookiecutter(metadata)
-        # write metadata yml file file to the project
-        save_file(f"{full_path}/metadata.yaml", yaml.dump(metadata))
-        # Change to the source directory in the new project
-        # get the current directory
-        current = os.getcwd()
-        chdir(full_path + "/source")
-        await action_fetch()
-        # Change back to the original directory
-        chdir(current)
+        await do_init_action()
         return
 
     if args.action == "search":
         if args.q is None:
             raise Exception("You must provide a --q=<search term>")
-        url = f"https://learning.oreilly.com/api/v2/search/?query={args.q}&sort=popularity"
+        url = f"https://learning.oreilly.com/api/v2/search/?query={args.q}&sort=popularity&field=title"
         headers = {"Authorization": f"Bearer {os.getenv('ORM_JWT')}"}
         r = requests.get(url, headers=headers)
         data = r.json()
         console = Console()
-        items = [f"{d['archive_id']} - {d['title']}" for d in data["results"][:10]]
+        items = [
+            f"{d['archive_id']} -  {' '.join(d['publishers'])} - {d['title']} by {','.join(d['authors'])}"
+            for d in data["results"][:10]
+        ]
         for index, item in enumerate(items, start=1):
             console.print(f"{index}. {item}")
 
@@ -494,7 +503,8 @@ async def process_command():
         if 0 <= selected_index < len(items):
             selected_id = items[selected_index].split(" - ")[0]
             args.identifier = selected_id
-            await process_command()
+            print(f"Selected {selected_id}")
+            await do_init_action()
 
 
 async def main():
