@@ -545,6 +545,6 @@ async def main():
 # Main
 # *****************************************************************************************
 if __name__ == "__main__":
-    os.chdir("/Users/odewahn/Desktop/tmp/content")
+    # os.chdir("/Users/odewahn/Desktop/tmp/content")
     # init --identifier=9781098153427 --project=test2
     asyncio.run(main())
