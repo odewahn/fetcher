@@ -14,7 +14,7 @@ with console.status(f"[bold green]Loading required libraries...") as status:
     from textual.widgets import ListView, ListItem
     from textual.reactive import Reactive
     from textual.events import Key
-    from rich import print
+    from rich import print, Text
     from rich.table import Table
     from dotenv import load_dotenv, find_dotenv
     from ebooklib import epub
