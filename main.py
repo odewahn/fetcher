@@ -492,7 +492,7 @@ async def process_command():
                     ListItem(Static(Text(f"{d['archive_id']} - {d['title']}"))) for d in data["results"][:10]
                 ]
                 self.list_view = ListView(*items)
-                await self.view.dock(self.list_view)
+                await self.mount(self.list_view)
 
             async def on_key(self, event: Key):
                 if event.key == "enter":
