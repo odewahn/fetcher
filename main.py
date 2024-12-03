@@ -38,7 +38,7 @@ with console.status(f"[bold green]Loading required libraries...") as status:
 log = logging.getLogger("rich")
 ENV_FILENAME = ".fetcher"
 
-VERSION = "0.3.2"
+VERSION = "0.3.3"
 
 global args
 
@@ -77,8 +77,23 @@ def save_file(fn, data):
         f.write(data)
 
 
-def directory_name_from_metadata(metadata):
-    return f"{metadata['identifier']}-{slugify(metadata['title'][:40])}"
+def directory_name_from_metadata(idx, identifier, metadata):
+    # splif filename into filename and extension, handling case where extension is missing
+    filename, extension = os.path.splitext(metadata["filename"])
+    # split the title by "-" and put it back together so that it is < 40 characters long
+    title = ""
+    for word in slugify(metadata["title"]).split("-"):
+        if len(title) + len(word) < 40:
+            title += word + "-"
+    return f"{identifier}-{idx:03d}-{filename}-{title[:-1]}{extension}"
+
+
+def project_name_from_metadata(metadata):
+    title = ""
+    for word in slugify(metadata["title"]).split("-"):
+        if len(title) + len(word) < 40:
+            title += word + "-"
+    return f"{metadata['identifier']}-{title[:-1]}"
 
 
 # *****************************************************************************************
@@ -245,9 +260,12 @@ async def action_fetch_book(metadata):
             chapter["filename"]: chapter for chapter in chapters_metadata
         }
         save_file("chapter-metadata.yaml", json.dumps(chapters_metadata_out, indent=4))
-        # Save indifidual chapters to disk
+        # Save individual chapters to disk
         for idx, chapter in enumerate(chapters_content):
-            fn = f"{idx:05d}-{slugify(chapters_metadata[idx]['title'])}.html"
+            fn = directory_name_from_metadata(
+                idx, metadata["identifier"], chapters_metadata[idx]
+            )
+            # fn = f"{idx:05d}-{slugify(chapters_metadata[idx]['title'])}-{chapters_metadata[idx]['filename']}"
             save_file(fn, chapter)
 
 
@@ -297,7 +315,7 @@ async def action_fetch_from_file():
 
 def init_cookiecutter(metadata):
     project_name = (
-        directory_name_from_metadata(metadata) if args.project is None else args.project
+        project_name_from_metadata(metadata) if args.project is None else args.project
     )
     script_path = os.path.dirname(os.path.realpath(__file__))
     # Join the filename with the script path
@@ -332,6 +350,7 @@ def define_arguments(argString=None):
         "version",
         "metadata",
         "init",
+        "search",
     ]
 
     parser.add_argument(
@@ -347,6 +366,8 @@ def define_arguments(argString=None):
     parser.add_argument("--project", help="Project name", required=False)
 
     parser.add_argument("--file", help="File of works to fetch from", required=False)
+
+    parser.add_argument("--q", help="Search term", required=False)
 
     parser.add_argument(
         "--transcript",
@@ -417,7 +438,7 @@ async def process_command():
     if args.action == "metadata":
         metadata = fetch_metadata(args.identifier)
         print(yaml.dump(cleaned_metadata(metadata)))
-        print(directory_name_from_metadata(cleaned_metadata(metadata)))
+        print(project_name_from_metadata(cleaned_metadata(metadata)))
         return
 
     if args.action == "init":
@@ -440,6 +461,25 @@ async def process_command():
         await action_fetch()
         # Change back to the original directory
         chdir(current)
+        return
+
+    if args.action == "search":
+        if args.q is None:
+            raise Exception("You must provide a --q=<search term>")
+        url = f"https://learning.oreilly.com/api/v2/search/?query={args.q}&sort=popularity"
+        headers = {"Authorization": f"Bearer {os.getenv('ORM_JWT')}"}
+        r = requests.get(url, headers=headers)
+        data = r.json()
+        out = Table(title="Search Results")
+        out.add_column("ID", style="cyan", no_wrap=True)
+        out.add_column("Format", style="magenta")
+        out.add_column("Publishers", style="magenta")
+        out.add_column("Title", style="magenta")
+        for d in data["results"][:10]:
+            out.add_row(
+                d["archive_id"], d["format"], ",".join(d["publishers"]), d["title"]
+            )
+        console.print(out)
         return
 
 
