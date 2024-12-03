@@ -11,7 +11,7 @@ with console.status(f"[bold green]Loading required libraries...") as status:
     from argparse import ArgumentParser, BooleanOptionalAction
     from rich.console import Console
     from textual.app import App
-    from textual.widgets import ListView, ListItem
+    from textual.widgets import ListView, ListItem, Static
     from textual.reactive import Reactive
     from textual.events import Key
     from rich import print
@@ -489,7 +489,7 @@ async def process_command():
 
             async def on_mount(self):
                 items = [
-                    ListItem(Text(f"{d['archive_id']} - {d['title']}")) for d in data["results"][:10]
+                    ListItem(Static(Text(f"{d['archive_id']} - {d['title']}"))) for d in data["results"][:10]
                 ]
                 self.list_view = ListView(*items)
                 await self.view.dock(self.list_view)
