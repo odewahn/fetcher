@@ -338,7 +338,7 @@ def init_cookiecutter(metadata):
     print(f"Project name is {project_name}")
     script_path = os.path.dirname(os.path.realpath(__file__))
     # Join the filename with the script path
-    fn = os.path.join(script_path, "project_template/")
+    fn = os.path.join(script_path, "project_template")
     cookiecutter(
         fn,
         no_input=True,
