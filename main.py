@@ -400,8 +400,7 @@ async def process_command():
         return
 
     if args.action == "help":
-        parser = create_parser()
-        parser.print_help()
+        create_parser().print_help()
         return
 
     if args.action == "mkdir":
