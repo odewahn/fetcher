@@ -77,6 +77,16 @@ def create_parser(argString=None):
 
     add_subparser("pwd", "Print the working directory", [])
 
+    add_subparser(
+        "init",
+        "Initialize a new project",
+        [
+            ("identifier", {"type": str, "help": "Identifier to initialize"}),
+            ("--dir", {"type": str, "help": "Directory name to use"}),
+            ("--project", {"type": str, "help": "Project name to use", "default": None}),
+        ],
+    )
+
     if argString:
         return parser.parse_args(shlex_split(argString))
     else:
