@@ -48,6 +48,9 @@ VERSION = "0.3.3"
 global args
 
 
+script_path = os.path.dirname(os.path.realpath(__file__))
+
+
 # Check if the .fetcher file exists in the home directory
 def load_env():
     home = str(Path.home())
@@ -275,7 +278,7 @@ async def action_fetch_book(metadata):
         chapters_metadata_out = {
             chapter["filename"]: chapter for chapter in chapters_metadata
         }
-        save_file("chapter-metadata.yaml", json.dumps(chapters_metadata_out, indent=4))
+        save_file("chapter-metadata.json", json.dumps(chapters_metadata_out, indent=4))
         # Save individual chapters to disk
         for idx, chapter in enumerate(chapters_content):
             fn = directory_name_from_metadata(
@@ -330,27 +333,21 @@ async def action_fetch_from_file():
 
 
 def init_cookiecutter(metadata):
-    print("Args in init_cookiecutter", args)
-    print("Metadata in init_cookiecutter", metadata)
     project_name = (
-        project_name_from_metadata(metadata) if args.dir is None else args.dir
+        project_name_from_metadata(metadata) if args.name is None else args.name
     )
-    print(f"Project name is {project_name}")
-    script_path = os.path.dirname(os.path.realpath(__file__))
-    # Join the filename with the script path
-    fn = os.path.join(script_path, "project_template")
     cookiecutter(
-        fn,
+        os.path.join(script_path, "project_template/"),
         no_input=True,
         extra_context={"project_name": project_name, **metadata},
-        output_dir=os.path.expanduser(project_name),
+        output_dir=os.getcwd(),
         overwrite_if_exists=True,
     )
-    return os.path.expanduser(args.dir) + "/" + project_name
+    #  get the current directory
+    return os.getcwd() + "/" + project_name
 
 
 async def do_init_action():
-    print(f"Fetching {args}")
     if args.identifier is None:
         raise Exception("You must provide an identifier")
     if load_env() is False:
@@ -358,9 +355,7 @@ async def do_init_action():
         load_env()
     metadata = fetch_metadata(args.identifier)
     metadata = cleaned_metadata(metadata)
-    print(f"Metadata is {metadata}")
     full_path = init_cookiecutter(metadata)
-    print(f"Full path is {full_path}")
     # write metadata yml file file to the project
     save_file(f"{full_path}/metadata.yaml", yaml.dump(metadata))
     # Change to the source directory in the new project
@@ -382,6 +377,9 @@ async def process_command():
         action_set_credentials()
         return
 
+    if args.action == "exit":
+        sys.exit(0)
+
     if args.action == "ls":
         num_files = len(glob.glob("*"))
         if num_files > 15:
@@ -399,6 +397,11 @@ async def process_command():
 
     if args.action == "pwd":
         print(os.getcwd())
+        return
+
+    if args.action == "help":
+        parser = create_parser()
+        parser.print_help()
         return
 
     if args.action == "mkdir":
