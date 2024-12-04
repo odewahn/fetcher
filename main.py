@@ -7,8 +7,8 @@ console = Console()
 
 # Set up a loading message as the libraries are loaded
 with console.status(f"[bold green]Loading required libraries...") as status:
-
     from argparse import ArgumentParser, BooleanOptionalAction
+    from create_parser import create_parser
     from rich.console import Console
     from textual.app import App
     from textual.widgets import ListView, ListItem, Static
@@ -330,9 +330,12 @@ async def action_fetch_from_file():
 
 
 def init_cookiecutter(metadata):
+    print("Args in init_cookiecutter", args)
+    print("Metadata in init_cookiecutter", metadata)
     project_name = (
-        project_name_from_metadata(metadata) if args.project is None else args.project
+        project_name_from_metadata(metadata) if args.dir is None else args.dir
     )
+    print(f"Project name is {project_name}")
     script_path = os.path.dirname(os.path.realpath(__file__))
     # Join the filename with the script path
     fn = os.path.join(script_path, "project_template/")
@@ -340,76 +343,24 @@ def init_cookiecutter(metadata):
         fn,
         no_input=True,
         extra_context={"project_name": project_name, **metadata},
-        output_dir=os.path.expanduser(args.dir),
+        output_dir=os.path.expanduser(project_name),
         overwrite_if_exists=True,
     )
     return os.path.expanduser(args.dir) + "/" + project_name
 
 
-# *****************************************************************************************
-# Code related to the command line interface
-# *****************************************************************************************
-
-
-def define_arguments(argString=None):
-
-    parser = ArgumentParser(description="Fetch O'Reilly Content", exit_on_error=False)
-
-    ACTIONS = [
-        "auth",
-        "transcript",
-        "fetch",
-        "ls",
-        "cd",
-        "mkdir",
-        "pwd",
-        "version",
-        "metadata",
-        "init",
-        "search",
-    ]
-
-    parser.add_argument(
-        "action",
-        choices=ACTIONS,
-        help="The action to perform ",
-    )
-
-    parser.add_argument("--identifier", help="Identifier to use", required=False)
-
-    parser.add_argument("--dir", help="Directory name", required=False, default=".")
-
-    parser.add_argument("--project", help="Project name", required=False)
-
-    parser.add_argument("--file", help="File of works to fetch from", required=False)
-
-    parser.add_argument("--q", help="Search term", required=False)
-
-    parser.add_argument(
-        "--transcript",
-        help="Don't do any content conversions on download (e.g., for a course just get raw transcript)",
-        required=False,
-        default=False,
-        action=BooleanOptionalAction,
-    )
-
-    if argString:
-        return parser.parse_args(shlex_split(argString))
-    else:
-        return parser.parse_args()
-
-
 async def do_init_action():
+    print(f"Fetching {args}")
     if args.identifier is None:
-        raise Exception("You must provide an --identifier=<identifier>")
-    if args.dir is None:
-        raise Exception("You must provide a --dir=<directory>")
+        raise Exception("You must provide an identifier")
     if load_env() is False:
         action_set_api_key()
         load_env()
     metadata = fetch_metadata(args.identifier)
     metadata = cleaned_metadata(metadata)
+    print(f"Metadata is {metadata}")
     full_path = init_cookiecutter(metadata)
+    print(f"Full path is {full_path}")
     # write metadata yml file file to the project
     save_file(f"{full_path}/metadata.yaml", yaml.dump(metadata))
     # Change to the source directory in the new project
@@ -429,23 +380,6 @@ async def process_command():
 
     if args.action == "auth":
         action_set_credentials()
-
-    if args.action == "fetch":
-        # If both a file and an identifier are provided, raise an error
-        if args.file and args.identifier:
-            raise Exception("You can't provide both a file and an identifier")
-        # If neither a file nor an identifier are provided, raise an error
-        if args.file is None and args.identifier is None:
-            raise Exception("You must provide either a file or an identifier")
-        # Check that they have a JWT
-        if load_env() is False:
-            action_set_api_key()
-            load_env()
-        # Fetch the content.  If there is an identifier, then fetch that.  If there is a file, then fetch from the file
-        if args.identifier:
-            await action_fetch()
-        else:
-            action_fetch_from_file()
         return
 
     if args.action == "ls":
@@ -463,30 +397,27 @@ async def process_command():
         chdir(path)
         return
 
-    if args.action == "mkdir":
-        if not args.dir:
-            raise Exception("You must provide a --dir=<directory>")
-        os.mkdir(args.dir)
-        return
-
     if args.action == "pwd":
         print(os.getcwd())
         return
 
-    if args.action == "metadata":
-        metadata = fetch_metadata(args.identifier)
-        print(yaml.dump(cleaned_metadata(metadata)))
-        print(project_name_from_metadata(cleaned_metadata(metadata)))
+    if args.action == "mkdir":
+        if not args.dir:
+            raise Exception("You must provide a --dir=<directory>")
+        path = os.path.expanduser(args.dir)
+        os.makedirs(path)
         return
 
-    if args.action == "init":
+    if args.action == "fetch":
         await do_init_action()
         return
 
     if args.action == "search":
-        if args.q is None:
-            raise Exception("You must provide a --q=<search term>")
-        url = f"https://learning.oreilly.com/api/v2/search/?query={args.q}&sort=popularity&field=title"
+        if len(args.query) is None:
+            raise Exception("You must provide a search term")
+        query = " ".join(args.query)
+        print(f"Searching for {query}")
+        url = f"https://learning.oreilly.com/api/v2/search/?query={query}&sort=popularity&field=title"
         headers = {"Authorization": f"Bearer {os.getenv('ORM_JWT')}"}
         r = requests.get(url, headers=headers)
         data = r.json()
@@ -510,7 +441,7 @@ async def process_command():
 async def main():
     global args
     if len(sys.argv) > 1:
-        args = define_arguments()
+        args = create_parser()
         await process_command()
         try:
             await process_command()
@@ -532,7 +463,7 @@ async def main():
             if argString == "exit":
                 break
             try:
-                args = define_arguments(argString)
+                args = create_parser(argString)
                 await process_command()
             except Exception as e:
                 console.log("[red]An error occurred on this request[/red]")
