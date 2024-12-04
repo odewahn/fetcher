@@ -52,7 +52,7 @@ def create_parser(argString=None):
         "Change the working directory",
         [
             ("identifier", {"type": str, "help": "Identifier to fetch"}),
-            ("--dir", {type: str, "help": "Directory name to use"}),
+            ("--dir", {"type": str, "help": "Directory name to use"}),
             ("--transcript", {"action": "store_true", "help": "Fetch the transcript"}),
         ],
     )
