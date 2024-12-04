@@ -49,7 +49,7 @@ def create_parser(argString=None):
 
     add_subparser(
         "fetch",
-        "Change the working directory",
+        "Fetch content based on identifier",
         [
             ("identifier", {"type": str, "help": "Identifier to fetch"}),
             ("--dir", {"type": str, "help": "Directory name to use"}),
