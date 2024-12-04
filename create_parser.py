@@ -31,7 +31,7 @@ def create_parser(argString=None):
 
     parser = ThrowingArgumentParser(exit_on_error=False)
 
-    subparsers = parser.add_subparsers(dest="command")
+    subparsers = parser.add_subparsers(dest="action")
 
     def add_subparser(name, help_text, arguments):
         subparser = subparsers.add_parser(name, help=help_text)
@@ -65,7 +65,17 @@ def create_parser(argString=None):
         ],
     )
 
+    add_subparser(
+        "mkdir",
+        "Make a directory",
+        [
+            ("dir", {"type": str, "help": "Directory name"}),
+        ],
+    )
+
     add_subparser("ls", "List directories in the current directory", [])
+
+    add_subparser("pwd", "Print the working directory", [])
 
     if argString:
         return parser.parse_args(shlex_split(argString))
