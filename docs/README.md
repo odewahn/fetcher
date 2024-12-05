@@ -30,16 +30,16 @@ Authenticate with the O'Reilly Learning platform using a long-lived JWT. This va
 - **Description**: Search for a work.
 - **Arguments**:
   - `query`: Search terms to look for.
-  - `--name`: Directory name to use.
-  - `--transcript`: Fetch the transcript.
+  - `--name`: (optional) Directory name to use. If you do not provide this argument, the direcotry will be named in the the form `<identifier>-<title slug>` (e.g. `9781492047116-oreilly-saas-architecture`).
+  - `--transcript`: (optional) Use this flag to retrieve a raw transcript with timecodes rather than markdown.
 
 ### `fetch`
 
 - **Description**: Download content based on its identifier.
 - **Arguments**:
   - `identifier`: Identifier to fetch.
-  - `--name`: (optional) Directory name to use.
-  - `--transcript`: Use this flag to retrieve the raw transcript with timecodes rather than markdown.
+  - `--name`: (optional) Directory name to use. If you do not provide this argument, the direcotry will be named in the the form `<identifier>-<title slug>` (e.g. `9781492047116-oreilly-saas-architecture`).
+  - `--transcript`: (optional) Use this flag to retrieve a raw transcript with timecodes rather than markdown.
 
 ### `cd`
 
