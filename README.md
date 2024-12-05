@@ -2,7 +2,7 @@
 
 Fetch content from the O'Reilly Learning platform to store it locally.
 
-![animation](./site/fetcher.gif)
+![animation](./docs/fetcher.gif)
 
 # Development
 
