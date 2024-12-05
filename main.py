@@ -8,7 +8,7 @@ console = Console()
 # Set up a loading message as the libraries are loaded
 with console.status(f"[bold green]Loading required libraries...") as status:
     from argparse import ArgumentParser, BooleanOptionalAction
-    from create_parser import create_parser
+    from create_parser import create_parser, setup_parser
     from rich.console import Console
     from textual.app import App
     from textual.widgets import ListView, ListItem, Static
@@ -400,7 +400,7 @@ async def process_command():
         return
 
     if args.action == "help":
-        create_parser().print_help()
+        setup_parser().print_help()
         return
 
     if args.action == "mkdir":

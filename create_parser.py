@@ -27,7 +27,7 @@ class ThrowingArgumentParser(argparse.ArgumentParser):
         raise ArgumentParserError(message)
 
 
-def create_parser(argString=None):
+def setup_parser():
 
     parser = ThrowingArgumentParser(exit_on_error=False)
 
@@ -44,15 +44,17 @@ def create_parser(argString=None):
         "Search for a work",
         [
             ("query", {"nargs": "+", "help": "Search terms to look for"}),
+            ("--name", {"type": str, "help": "Directory name to use"}),
+            ("--transcript", {"action": "store_true", "help": "Fetch the transcript"}),
         ],
     )
 
     add_subparser(
         "fetch",
-        "Fetch content based on identifier",
+        "Download a work by its identifier",
         [
             ("identifier", {"type": str, "help": "Identifier to fetch"}),
-            ("--dir", {"type": str, "help": "Directory name to use"}),
+            ("--name", {"type": str, "help": "Directory name to use"}),
             ("--transcript", {"action": "store_true", "help": "Fetch the transcript"}),
         ],
     )
@@ -77,16 +79,21 @@ def create_parser(argString=None):
 
     add_subparser("pwd", "Print the working directory", [])
 
+    add_subparser("version", "Print the version of the program", [])
+
+    add_subparser("help", "Print this help message", [])
+
+    add_subparser("exit", "Exit the repl", [])
+
     add_subparser(
-        "init",
-        "Initialize a new project",
-        [
-            ("identifier", {"type": str, "help": "Identifier to initialize"}),
-            ("--dir", {"type": str, "help": "Directory name to use"}),
-            ("--project", {"type": str, "help": "Project name to use", "default": None}),
-        ],
+        "auth", "Enter authethentication credentials (saved in ~/.fetcher)", []
     )
 
+    return parser
+
+
+def create_parser(argString=None):
+    parser = setup_parser()
     if argString:
         return parser.parse_args(shlex_split(argString))
     else:
