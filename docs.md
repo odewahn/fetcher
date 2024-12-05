@@ -42,6 +42,10 @@ The following commands are available in the Fetcher CLI:
 
 - **Description**: Print the working directory.
 
+### `auth`
+
+- **Description**: Enter authentication credentials (saved in ~/.fetcher).
+
 ### `version`
 
 - **Description**: Print the version of the program.
