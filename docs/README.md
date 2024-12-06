@@ -6,7 +6,7 @@ Fetcher is a tool to fetch content from the O'Reilly Learning platform and store
 
 ## Installation
 
-Before you start, create an "Content" API token at https://learning.oreilly.com/account/api-tokens/
+Before you start, create an "Content" API token at [https://learning.oreilly.com/account/api-tokens/](https://learning.oreilly.com/account/api-tokens/). This token will be used to authenticate with the O'Reilly Learning platform.
 
 Then:
 
