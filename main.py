@@ -1,6 +1,7 @@
 # For pyinstaller, we want to show something as quickly as possible
 print("Starting.  This may take a minute, so please be patient...")
 from rich.console import Console
+from rich.progress import Progress
 
 
 console = Console()
@@ -232,49 +233,55 @@ def action_fetch_transcript(metadata):
     toc_url = fetch_toc_url(args.identifier)
     toc = fetch_url(toc_url)
     flattened_toc = flatten_toc(toc)
-    for idx, t in enumerate(flattened_toc):
-        url = fetch_transcript_url(args.identifier, t["metadata"]["full_path"])
-        transcript = fetch_transcript_by_url(url)
+    with Progress() as progress:
+        task = progress.add_task("[cyan]Fetching transcripts...", total=len(flattened_toc))
+        for idx, t in enumerate(flattened_toc):
+            url = fetch_transcript_url(args.identifier, t["metadata"]["full_path"])
+            transcript = fetch_transcript_by_url(url)
 
-        if args.transcript:
-            transcript = convert_to_transcript(transcript)
-            save_file(f"{idx:05d}-{slugify(t['title'])}.txt", transcript)
-        else:
-            transcript = convert_to_markdown(transcript)
-            fn = f"{idx:05d}-{slugify(t['title'])}.md"
-            level = "#"
-            if t["metadata"]["depth"] > 1:
-                level = "##"
-            md = f"{level} {t['title']}\n\n{transcript}"
-            save_file(fn, md)
+            if args.transcript:
+                transcript = convert_to_transcript(transcript)
+                save_file(f"{idx:05d}-{slugify(t['title'])}.txt", transcript)
+            else:
+                transcript = convert_to_markdown(transcript)
+                fn = f"{idx:05d}-{slugify(t['title'])}.md"
+                level = "#"
+                if t["metadata"]["depth"] > 1:
+                    level = "##"
+                md = f"{level} {t['title']}\n\n{transcript}"
+                save_file(fn, md)
+            progress.update(task, advance=1)
 
 
 async def action_fetch_book(metadata):
-    async with aiohttp.ClientSession() as session:
-        # Fetch the metadata about each chapter
-        chapters_metadata = await asyncio.gather(
-            *[async_fetch_url(session, url) for url in metadata["chapters"]]
-        )
-        # Fetch content of each chapter based on the medata file.  This maps 1:1 to the metadata
-        chapters_content = await asyncio.gather(
-            *[
-                async_fetch_url(session, chapter["content"], "html")
-                for chapter in chapters_metadata
-            ]
-        )
-        # Save the metadata to disk
-        # Conver metadata array into a hash keyed on the filename from the filename field
-        chapters_metadata_out = {
-            chapter["filename"]: chapter for chapter in chapters_metadata
-        }
-        save_file("chapter-metadata.json", json.dumps(chapters_metadata_out, indent=4))
-        # Save individual chapters to disk
-        for idx, chapter in enumerate(chapters_content):
-            fn = directory_name_from_metadata(
-                idx, metadata["identifier"], chapters_metadata[idx]
+    with Progress() as progress:
+        task = progress.add_task("[cyan]Fetching chapters...", total=len(metadata["chapters"]))
+        async with aiohttp.ClientSession() as session:
+            # Fetch the metadata about each chapter
+            chapters_metadata = await asyncio.gather(
+                *[async_fetch_url(session, url) for url in metadata["chapters"]]
             )
-            # fn = f"{idx:05d}-{slugify(chapters_metadata[idx]['title'])}-{chapters_metadata[idx]['filename']}"
-            save_file(fn, chapter)
+            # Fetch content of each chapter based on the medata file.  This maps 1:1 to the metadata
+            chapters_content = await asyncio.gather(
+                *[
+                    async_fetch_url(session, chapter["content"], "html")
+                    for chapter in chapters_metadata
+                ]
+            )
+            # Save the metadata to disk
+            # Conver metadata array into a hash keyed on the filename from the filename field
+            chapters_metadata_out = {
+                chapter["filename"]: chapter for chapter in chapters_metadata
+            }
+            save_file("chapter-metadata.json", json.dumps(chapters_metadata_out, indent=4))
+            # Save individual chapters to disk
+            for idx, chapter in enumerate(chapters_content):
+                fn = directory_name_from_metadata(
+                    idx, metadata["identifier"], chapters_metadata[idx]
+                )
+                # fn = f"{idx:05d}-{slugify(chapters_metadata[idx]['title'])}-{chapters_metadata[idx]['filename']}"
+                save_file(fn, chapter)
+                progress.update(task, advance=1)
 
 
 async def action_fetch():
