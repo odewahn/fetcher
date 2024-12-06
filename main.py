@@ -62,6 +62,16 @@ def load_env():
     return True
 
 
+def action_set_api_key():
+    home = str(Path.home())
+    # get user input for api key
+    api_key = input("Enter your API key> ")
+    # write the key to the .fetcher file
+    console.log(f"Missing API key in file {home}/{ENV_FILENAME}.")
+    with open(home + "/" + ENV_FILENAME, "w") as f:
+        f.write(f"API_KEY={api_key}")
+    console.log(f"API key saved in {home}/{ENV_FILENAME}")
+
 def action_set_credentials():
     home = str(Path.home())
     # get user input for api key
