@@ -44,7 +44,7 @@ with console.status(f"[bold green]Loading required libraries...") as status:
 log = logging.getLogger("rich")
 ENV_FILENAME = ".fetcher"
 
-VERSION = "0.3.3"
+VERSION = "0.3.4"
 
 global args
 
@@ -71,6 +71,7 @@ def action_set_api_key():
     with open(home + "/" + ENV_FILENAME, "w") as f:
         f.write(f"API_KEY={api_key}")
     console.log(f"API key saved in {home}/{ENV_FILENAME}")
+
 
 def action_set_credentials():
     home = str(Path.home())
@@ -244,7 +245,9 @@ def action_fetch_transcript(metadata):
     toc = fetch_url(toc_url)
     flattened_toc = flatten_toc(toc)
     with Progress() as progress:
-        task = progress.add_task("[cyan]Fetching transcripts...", total=len(flattened_toc))
+        task = progress.add_task(
+            "[cyan]Fetching transcripts...", total=len(flattened_toc)
+        )
         for idx, t in enumerate(flattened_toc):
             url = fetch_transcript_url(args.identifier, t["metadata"]["full_path"])
             transcript = fetch_transcript_by_url(url)
@@ -265,7 +268,9 @@ def action_fetch_transcript(metadata):
 
 async def action_fetch_book(metadata):
     with Progress() as progress:
-        task = progress.add_task("[cyan]Fetching chapters...", total=len(metadata["chapters"]))
+        task = progress.add_task(
+            "[cyan]Fetching chapters...", total=len(metadata["chapters"])
+        )
         async with aiohttp.ClientSession() as session:
             # Fetch the metadata about each chapter
             chapters_metadata = await asyncio.gather(
@@ -283,7 +288,9 @@ async def action_fetch_book(metadata):
             chapters_metadata_out = {
                 chapter["filename"]: chapter for chapter in chapters_metadata
             }
-            save_file("chapter-metadata.json", json.dumps(chapters_metadata_out, indent=4))
+            save_file(
+                "chapter-metadata.json", json.dumps(chapters_metadata_out, indent=4)
+            )
             # Save individual chapters to disk
             for idx, chapter in enumerate(chapters_content):
                 fn = directory_name_from_metadata(

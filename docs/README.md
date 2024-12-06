@@ -6,16 +6,12 @@ Fetcher is a tool to fetch content from the O'Reilly Learning platform and store
 
 ## Installation
 
-Before you start, request a long-lived jwt from the U&A team as described in devdocs:
-
-```
-../manage.py generate_jwt <your platform email account> --expiration-minutes=525600
-```
+Before you start, create an "Content" API token at https://learning.oreilly.com/account/api-tokens/
 
 Then:
 
 - Install the latest package on the [releases page](https://github.com/odewahn/fetcher/releases). Currently only OSX is supported.
-- Run the `auth` command and enter the long-lived JWT token from the O'Reilly Learning platform.
+- Run the `auth` command and enter the content auth token you created earlier.
 - Open a terminal and run the `fetcher` command.
 - Use the `search` command to find and download content you want to experiment with.
 
