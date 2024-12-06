@@ -61,27 +61,15 @@ def load_env():
     return True
 
 
-# Write the API key to the .fetcher file in the home directory
-def action_set_api_key():
-    home = str(Path.home())
-    # get user input for api key
-    api_key = input("Enter your API key> ")
-    # write the key to the .fetcher file
-    console.log(f"Missing API key in file {home}/{ENV_FILENAME}.")
-    with open(home + "/" + ENV_FILENAME, "w") as f:
-        f.write(f"ORM_API_KEY={api_key}")
-    console.log(f"API key saved in {home}/{ENV_FILENAME}")
-
-
 def action_set_credentials():
     home = str(Path.home())
     # get user input for api key
-    jwt = input("Enter your JWT> ")
+    jwt = input("Enter your auth token> ")
     # write the key to the .promptlab file
     console.log(f"Missing credentials in file {home}/{ENV_FILENAME}.")
     with open(home + "/" + ENV_FILENAME, "w") as f:
-        f.write(f"ORM_JWT={jwt}")
-    console.log(f"JWT saved in {home}/{ENV_FILENAME}")
+        f.write(f"ORM_AUTH_TOKEN={jwt}")
+    console.log(f"Token saved in {home}/{ENV_FILENAME}")
 
 
 # Returns a ; delimited string based on a key extracted from an array of dictionaries
@@ -113,6 +101,10 @@ def project_name_from_metadata(metadata):
         if len(title) + len(word) < 40:
             title += word + "-"
     return f"{metadata['identifier']}-{title[:-1]}"
+
+
+def get_auth_headers():
+    return {"Authorization": f"Token {os.getenv('ORM_AUTH_TOKEN')}"}
 
 
 # *****************************************************************************************
@@ -150,8 +142,7 @@ def fetch_metadata(work):
 
 def fetch_url(url, format="json"):
     console.log("[bold]Fetching in fetch_url... [/]: [italic]" + url + "[/]")
-    headers = {"Authorization": f"Bearer {os.getenv('ORM_JWT')}"}
-    r = requests.get(url, headers=headers)
+    r = requests.get(url, headers=get_auth_headers())
     if format == "html":
         return r.text
     else:
@@ -160,8 +151,7 @@ def fetch_url(url, format="json"):
 
 async def async_fetch_url(session, url, format="json"):
     console.log("[bold]Fetching in async_fetch_url ... [/]: [italic]" + url + "[/]")
-    headers = {"Authorization": f"Bearer {os.getenv('ORM_JWT')}"}
-    async with session.get(url, headers=headers) as r:
+    async with session.get(url, headers=get_auth_headers()) as r:
         if format == "html":
             return await r.text()
         else:
@@ -260,7 +250,6 @@ def action_fetch_transcript(metadata):
 
 
 async def action_fetch_book(metadata):
-    headers = {"Authorization": f"Bearer {os.getenv('ORM_JWT')}"}
     async with aiohttp.ClientSession() as session:
         # Fetch the metadata about each chapter
         chapters_metadata = await asyncio.gather(
@@ -420,8 +409,7 @@ async def process_command():
         query = " ".join(args.query)
         print(f"Searching for {query}")
         url = f"https://learning.oreilly.com/api/v2/search/?query={query}&sort=popularity&field=title"
-        headers = {"Authorization": f"Bearer {os.getenv('ORM_JWT')}"}
-        r = requests.get(url, headers=headers)
+        r = requests.get(url, headers=get_auth_headers())
         data = r.json()
         console = Console()
         items = [
